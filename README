@@ -1,0 +1,6 @@
+--  This is an implementation of the classic Simon game for eLua
+--  by Ives Negreiros, Led Lab, PUC-Rio
+--
+--  Runs on Luminary Micro/Texas Instruments with the onboard OLED display.
+--  Please check http://wiki.eluaproject.net/Simon for more information
+--
