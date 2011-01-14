@@ -1,54 +1,60 @@
 -------------------------------------------------------------------------------
---                                                                           --
---  An implementation of the classic Simon game for eLua
---  by Ives Negreiros, Led Lab, PUC-Rio
+-- --
+-- An implementation of the classic Simon game for eLua
+-- by Ives Negreiros, Led Lab, PUC-Rio
 --
---  Runs on Luminary Micro/Texas Instruments with the onboard OLED display.
---  Please check http://wiki.eluaproject.net/Simon for more information
+-- Runs on Luminary Micro/Texas Instruments with the onboard OLED display.
+-- Please check http://wiki.eluaproject.net/Simon for more information
 --
 -------------------------------------------------------------------------------
-local pwmid, tmrid = 1, 1
+local bzrpwm, tmrid = 1
 local high_score = 0
 local seed = 0
 local code = {}
 local user = {}
+local pwmfreq = 50
 local platform = require( pd.board() )
 lm3s.disp.init( 1000000 )
+pwm.setclock( bzrpwm, 25000000 )
 
 local turn_on = {
-  [ 1 ] = function()                         -- Turn on button 1
-    pio.pin.sethigh( pio.PE_1 )
-    pio.pin.setlow( pio.PC_4 )
-    pwm.setup( pwmid, 392, 50 )              -- Set the PWM frequency as the frequency of the note G4
-    pwm.start( pwmid )                       -- Turn on buzzer
+  [ 1 ] = function( intensity, pwmfreq )      -- Turn on button 1
+    pwm.setup( 4, 100000, intensity )         -- Set the PWM
+    pwm.start( 4 )                            -- Set the PWM
+    pio.pin.sethigh( pio.PC_4 )
+    pwm.setup( bzrpwm, 392, pwmfreq )              -- Set the PWM frequency as the frequency of the note G4
   end, 
   
-  [ 2 ] = function()                         -- Turn on button 2
-    pio.pin.sethigh( pio.PE_0 )
-    pio.pin.setlow( pio.PC_5 )
-    pwm.setup( pwmid, 330, 50 )              -- Set the PWM frequency as the frequency of the note E4
-    pwm.start( pwmid )                       -- Turn on buzzer
+  [ 2 ] = function( intensity, pwmfreq )      -- Turn on button 2
+    pwm.setup( 5, 100000, intensity )         -- Set the PWM
+    pwm.start( 5 )                            -- Set the PWM
+    pio.pin.sethigh( pio.PC_5 )
+    pwm.setup( bzrpwm, 330, pwmfreq )              -- Set the PWM frequency as the frequency of the note E4
   end,
 
-  [ 3 ] = function()                         -- Turn on button 3
-    pio.pin.sethigh( pio.PE_0, pio.PE_1 )
-    pio.pin.setlow( pio.PC_6 )
-    pwm.setup( pwmid, 262 , 50 )              -- Set the PWM frequency as the frequency of the note C4
-    pwm.start( pwmid )                        -- Turn on buzzer
+  [ 3 ] = function( intensity, pwmfreq )      -- Turn on button 3
+    pwm.setup( 4, 100000, intensity )         -- Set the PWM
+    pwm.setup( 5, 100000, intensity )         -- Set the PWM
+    pwm.start( 4 )
+    pwm.start( 5 )
+    pio.pin.sethigh( pio.PC_6 )
+    pwm.setup( bzrpwm, 262 , pwmfreq )             -- Set the PWM frequency as the frequency of the note C4
   end,
 
-  [ 4 ] = function()                         -- Turn on button 4
-    pio.pin.sethigh( pio.PE_2)
-    pio.pin.setlow( pio.PC_7 )
-    pwm.setup( pwmid, 196, 50 )              -- Set the PWM frequency as the frequency of the note G3
-    pwm.start( pwmid )                       -- Turn on buzzer
+  [ 4 ] = function( intensity, pwmfreq )      -- Turn on button 4
+    pwm.setup( 0, 100000, intensity )         -- Set the PWM
+    pwm.start( 0 )
+    pio.pin.sethigh( pio.PC_7 )
+    pwm.setup( bzrpwm, 196, pwmfreq )              -- Set the PWM frequency as the frequency of the note G3
   end,
 }
 
 function turn_off()                          --Turn off all leds
-  pio.port.setlow( pio.PE )
-  pio.port.sethigh( pio.PC )
-  pwm.stop( pwmid )
+  pwm.stop( 0 )
+  pwm.stop( 4 )
+  pwm.stop( 5 )
+  pwm.stop( bzrpwm )
+  pio.port.setlow( pio.PC )
 end 
 
 function button_pressed()                    -- Returns the number of the button pressed. If none of buttons are pressed returns 0
@@ -77,7 +83,8 @@ end
 
 function show_sequence()                     -- blinks LEDs to show the sequence
   for _, v in ipairs( code ) do
-    turn_on[ v ]()
+    turn_on[ v ]( 99, pwmfreq )
+    pwm.start( bzrpwm )
     tmr.delay( 1, 500000 )
     turn_off()
     tmr.delay( 1, 200000 )
@@ -93,28 +100,33 @@ function init()                              -- Turns on the buttons and sets th
   code = {}
   user = {}
   pio.port.setdir( pio.INPUT, pio.PB )
+  pio.port.setdir( pio.OUTPUT, pio.PC )
   pio.pin.setpull(  pio.PULLUP, pio.PB_0, pio.PB_1, pio.PB_2, pio.PB_3  )
-  pio.port.setdir( pio.OUTPUT, pio.PE, pio.PC )
+  pwm.setup( 0, 100000, 99 )
+  pwm.setup( 4, 100000, 99 )
+  pwm.setup( 5, 100000, 99 )
   while button_pressed() == 0 do
-    pio.pin.sethigh( pio.PE_1 )
-    pio.pin.setlow( pio.PC_4 )
+    pwm.start( 5 )
+    pio.pin.sethigh( pio.PC_4 )
     tmr.delay( 1, 1000 )
     turn_off()
-    pio.pin.sethigh( pio.PE_0 )
-    pio.pin.setlow( pio.PC_5 )
+    pwm.start( 4 )
+    pio.pin.sethigh( pio.PC_5 )
     tmr.delay( 1, 1000 )
     turn_off()
-     pio.pin.sethigh( pio.PE_2)
-    pio.pin.setlow( pio.PC_7 )
+    pwm.start( 0 )
+    pio.pin.sethigh( pio.PC_7 )
     tmr.delay( 1, 1000 )
     turn_off()
-    pio.pin.sethigh( pio.PE_0, pio.PE_1 )
-    pio.pin.setlow( pio.PC_6 )
+    pwm.start( 4 )
+    pwm.start( 5 )
+    pio.pin.sethigh( pio.PC_6 )
     tmr.delay( 1, 1000 )
     turn_off()
     seed = seed + 1
   end
   math.randomseed( seed )
+  tmr.delay( 1, 200000 )
   lm3s.disp.clear()
   lm3s.disp.print( "eLua Simon", 35, 30, 11 )
   increases_code()
@@ -129,32 +141,18 @@ function game_over()                         -- Plays the game over sequence and
   lm3s.disp.print( "Press any button", 15, 70, 11 )
   lm3s.disp.print( "to restart", 31, 78, 11 )
   for i = 1, 3 do
-    turn_on[ 1 ]()
+    turn_on[ 1 ]( 99, pwmfreq )
     tmr.delay( 1, 100000 )
     turn_off()
-    turn_on[ 2 ]()
+    turn_on[ 2 ]( 99, pwmfreq )
     tmr.delay( 1, 100000 )
     turn_off()
-    turn_on[ 4 ]()
+    turn_on[ 4 ]( 99, pwmfreq )
     tmr.delay( 1, 100000 )
     turn_off()
-    turn_on[ 3 ]()
+    turn_on[ 3 ]( 99, pwmfreq )
     tmr.delay( 1, 100000 )
     turn_off()
-  end
-  for i = 1, 200 do
-    pwm.setup( pwmid, 440, 50 )
-    pwm.start( pwmid )
-    tmr.delay( 1, 1500 )
-    pwm.setup( pwmid, 494, 50 )
-    pwm.start( pwmid )
-    tmr.delay( 1, 1500 )
-    pwm.setup( pwmid, 587, 50 )
-    pwm.start( pwmid )
-    tmr.delay( 1, 1500 )        
-    pwm.setup( pwmid, 523, 50 )
-    pwm.start( pwmid ) 
-    tmr.delay( 1, 1500 )
   end
   init()
 end
@@ -173,14 +171,26 @@ update_score()
 lm3s.disp.print( "Press Select button", 7, 70, 11 )
 lm3s.disp.print( "to replay", 36, 78, 11 )
 while( true ) do
+
   if platform.btn_pressed( platform.BTN_SELECT ) and #user == 0 then
     show_sequence()
   end
+  
+  if platform.btn_pressed( platform.BTN_LEFT ) then
+    if pwmfreq == 50 then
+      pwmfreq = 0
+    else
+      pwmfreq = 50
+    end 
+    tmr.delay( 1, 200000 )
+  end
+  
   local button = button_pressed()
   if button ~= 0 then                        -- Tests if any button is pressed
     tmr.delay( 1, 35000 )                    -- Wait for debounce, if it is the case.
     if button_pressed() == button then       -- Confirm the first read
-      turn_on[ button ]()                    -- Turns on the button pressed
+      turn_on[ button ]( 99, pwmfreq )       -- Turns on the button pressed
+      pwm.start( bzrpwm )
       while button_pressed() == button do    -- Wait button be released
         tmr.delay( 1, 35000 )
       end
@@ -197,4 +207,16 @@ while( true ) do
       end
     end
   end
+  turn_on[ 1 ]( 90, pwmfreq )
+  tmr.delay( 1, 1000 )
+  turn_off()
+  turn_on[ 2 ]( 90, pwmfreq )
+  tmr.delay( 1, 1000 )
+  turn_off()
+  turn_on[ 4 ]( 90, pwmfreq )
+  tmr.delay( 1, 1000 )
+  turn_off()
+  turn_on[ 3 ]( 90, pwmfreq )
+  tmr.delay( 1, 1000 )
+  turn_off()
 end
