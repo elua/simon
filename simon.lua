@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- --
+--
 -- An implementation of the classic Simon game for eLua
 -- by Ives Negreiros, Led Lab, PUC-Rio
 --
